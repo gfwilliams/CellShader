@@ -1,0 +1,71 @@
+<html>
+<head><title>Google Spreadsheet CellShader</title></head>
+<body>
+<h1>Google Spreadsheet CellShader</h1>
+<h3>How's it work?</h3>
+<ul>
+<li>Create a Google Spreadsheet</li>
+<li>Tools -> Script Editor</li>
+<li>Find/create a 64x32 pixel image</li>
+<li>Load it in below</li>
+<li>Copy the generated script, and paste it into the script editor</li>
+<li>Save, and run (you'll have to give your script permissions)</li>
+</ul>
+
+<p>Load image <input type="file" id="imageLoader" name="imageLoader"/></p>
+<br/><canvas id="canv" style="border:1px solid black"></canvas>
+<pre id="scriptdiv"></pre>
+
+<script>
+// display the canvas
+var canvas = document.getElementById("canv");
+var imageWidth = 64;
+var imageHeight = 32;
+canvas.width = imageWidth;
+canvas.height = imageHeight;
+var ctx = canvas.getContext('2d');
+
+
+// Handle loading of the image
+var imgData; // the raw RGBA image data
+var imageLoader = document.getElementById('imageLoader');
+imageLoader.addEventListener('change', function (e) {
+  // This is called when you've chosen a file
+  // First we read the file
+  var reader = new FileReader();
+  reader.onload = function(event) {
+    // Then we load it into an image
+    var img = new Image();
+    img.onload = function() {
+      // we draw that image on to our canvas
+      ctx.drawImage(img, 0, 0, imageWidth, imageHeight);
+      // read back the image data into an array
+      imgData = ctx.getImageData(0, 0, imageWidth, imageHeight).data;
+      // and finally create the script
+      createScript();
+     }
+    img.src = event.target.result;
+  }
+  reader.readAsDataURL(e.target.files[0]);
+}, false);
+
+// Output the image as lines
+function createScript() {
+  var script = "function colorMe() {\n";
+  script +="  var s = SpreadsheetApp.getActiveSheet();\n";  
+  for (var x=0;x<imageWidth;x++)
+    script +="  s.setColumnWidth("+(x+1)+",20);\n";
+  for (var y=0;y<imageHeight;y++) {
+    for (var x=0;x<imageWidth;x++) {
+      var cr = imgData[(y*imageWidth + x)*4];
+      var cg = imgData[(y*imageWidth + x)*4 + 1];
+      var cb = imgData[(y*imageWidth + x)*4 + 2];
+      var col = (256+cr).toString(16).substr(-2) + (256+cg).toString(16).substr(-2) + (256+cb).toString(16).substr(-2);
+      script += '  s.getRange('+(y+1)+','+(x+1)+',1,1).setBackgroundColor("#'+col+'");\n'
+    }
+  }
+  script += "}\n";
+  document.getElementById("scriptdiv").innerHTML = script;
+}
+</script>
+</body>
